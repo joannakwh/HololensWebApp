@@ -6,10 +6,6 @@ admin.initializeApp();
 
 const database = admin.database().ref('/items');
 
-exports.helloWorld = functions.https.onRequest((request, response) => {
-    response.send("Hello from a Severless Database!");
-});
-
 //https://blog.usejournal.com/build-a-serverless-full-stack-app-using-firebase-cloud-functions-81afe34a64fc
 //CRUD HTTP ENDPOINTS
 
@@ -40,26 +36,19 @@ exports.addItem = functions.https.onRequest((req, res) => {
 
         database.push(obj);
 
-        let items = [];
+        //return message success
+        return res.status(200).json({
+            message: 'success!'
+        });
 
-        return database.on('value', (snapshot) => {
-            snapshot.forEach((item) => {
-                items.push({
-                    id: item.key,
-                    name: item.val().name
-                });
-            });
-
-            res.status(200).json(items)
-        }, (error) => {
-            res.status(error.code).json({
-                message: `Something went wrong. ${error.message}`
-            });
+    }, (error) => {
+        res.status(error.code).json({
+            message: `Error. ${error.message}`
         });
     });
 });
 
-//get all items
+//GET ALL ITEMS
 exports.getAllItems = functions.https.onRequest((req, res) => {
     return cors(req, res, () => {
         if (req.method !== 'GET') {
@@ -85,9 +74,40 @@ exports.getAllItems = functions.https.onRequest((req, res) => {
             res.status(200).json(items)
         }, (error) => {
             res.status(error.code).json({
-                message: `Something went wrong. ${error.message}`
+                message: `Error. ${error.message}`
             });
         });
     });
 });
 
+//DELETE BY ID
+exports.delete = functions.https.onRequest((req, res) => {
+    return cors(req, res, () => {
+        //return error if not delete
+        if (req.method !== 'DELETE') {
+            return res.status(401).json({
+                message: 'Not allowed'
+            });
+        }
+        const id = req.query.id;
+        const path = `/items/${id}`;
+        admin.database().child(path).once('value', (snap) => {
+            if (snap.val() == null) {
+                return res.status(204).json({
+                    message: 'id not found'
+                });
+            } else {
+                admin.database().ref(path).remove();
+                //return message success
+                return res.status(200).json({
+                    message: 'success!'
+                });
+            }
+        });
+
+    }, (error) => {
+        res.status(error.code).json({
+            message: `Error. ${error.message}`
+        });
+    });
+});
