@@ -81,7 +81,7 @@ exports.getAllItems = functions.https.onRequest((req, res) => {
 });
 
 //DELETE BY ID
-exports.delete = functions.https.onRequest((req, res) => {
+exports.deleteById = functions.https.onRequest((req, res) => {
     return cors(req, res, () => {
         //return error if not delete
         if (req.method !== 'DELETE') {
@@ -89,9 +89,10 @@ exports.delete = functions.https.onRequest((req, res) => {
                 message: 'Not allowed'
             });
         }
-        const id = req.query.id;
+        const id = req.body.id;
+
         const path = `/items/${id}`;
-        admin.database().child(path).once('value', (snap) => {
+        admin.database().ref(path).once('value', (snap) => {
             if (snap.val() == null) {
                 return res.status(204).json({
                     message: 'id not found'
@@ -99,8 +100,8 @@ exports.delete = functions.https.onRequest((req, res) => {
             } else {
                 admin.database().ref(path).remove();
                 //return message success
-                return res.status(200).json({
-                    message: 'success!'
+                res.status(200).json({
+                    message: `Successfully deleted ${id}`
                 });
             }
         });
@@ -110,4 +111,38 @@ exports.delete = functions.https.onRequest((req, res) => {
             message: `Error. ${error.message}`
         });
     });
+});
+
+//GET ALL MATCHING ID
+exports.getAllItemsMatchingName = functions.https.onRequest((req, res) => {
+    return cors(req, res, () => {
+        if (req.method !== 'GET') {
+            return res.status(404).json({
+                message: 'Not allowed'
+            });
+        }
+        const name = req.body.name;
+        let items = [];
+
+        return database.on('value', (snapshot) => {
+            snapshot.forEach((item) => {
+                console.log('name');
+                if (item.name.contains(name)) {
+                    items.push({
+                        id: item.key,
+                        name: item.val().name,
+                        category: item.val().category,
+                        text: item.val().text,
+                        imgurl: item.val().imgurl,
+                        audiourl: item.val().audiourl
+                    });
+                }
+            });
+            res.status(200).json(items);
+        }, (error) => {
+            res.status(error.code).json({
+                message: `Error. ${error.message}`
+            });
+        }); //end database snapshot
+    }); //end cors
 });
