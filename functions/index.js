@@ -21,6 +21,7 @@ exports.addItem = functions.https.onRequest((req, res) => {
         //must have all params
         const name = req.body.name;
         const page = req.body.page;
+        const title = req.body.title;
         const category = req.body.category;
         const text = req.body.text;
         const imgurl = req.body.imgurl;
@@ -29,17 +30,19 @@ exports.addItem = functions.https.onRequest((req, res) => {
         const obj = {
             'name': name,
             'page': page,
+            'title': title,
             'category': category,
             'text': text,
             'imgurl': imgurl,
             'audiourl': audiourl
         };
 
-        database.push(obj);
+        const key = database.push(obj).key;
 
-        //return message success
+        //return message success and key
         return res.status(200).json({
-            message: 'success!'
+            message: `success!`,
+            key: key
         });
 
     }, (error) => {
@@ -134,6 +137,7 @@ exports.getAllItems = functions.https.onRequest((req, res) => {
                     id: item.key,
                     name: item.val().name,
                     page: item.val().page,
+                    title: item.val().title,
                     category: item.val().category,
                     text: item.val().text,
                     imgurl: item.val().imgurl,
@@ -166,6 +170,7 @@ exports.getAllItemsMatchingName = functions.https.onRequest((req, res) => {
                     id: item.key,
                     name: item.val().name,
                     page: item.val().page,
+                    title: item.val().title,
                     category: item.val().category,
                     text: item.val().text,
                     imgurl: item.val().imgurl,
