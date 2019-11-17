@@ -28,6 +28,7 @@ exports.addItem = functions.https.onRequest((req, res) => {
 
         const obj = {
             'name': name,
+            'page': page,
             'category': category,
             'text': text,
             'imgurl': imgurl,
