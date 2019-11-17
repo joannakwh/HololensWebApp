@@ -17,10 +17,10 @@ exports.addItem = functions.https.onRequest((req, res) => {
                 message: 'Not allowed'
             })
         }
-        console.log(req.body)
 
         //must have all params
         const name = req.body.name;
+        const page = req.body.page;
         const category = req.body.category;
         const text = req.body.text;
         const imgurl = req.body.imgurl;
@@ -48,38 +48,6 @@ exports.addItem = functions.https.onRequest((req, res) => {
     });
 });
 
-//GET ALL ITEMS
-exports.getAllItems = functions.https.onRequest((req, res) => {
-    return cors(req, res, () => {
-        if (req.method !== 'GET') {
-            return res.status(404).json({
-                message: 'Not allowed'
-            });
-        }
-
-        let items = [];
-
-        return database.on('value', (snapshot) => {
-            snapshot.forEach((item) => {
-                items.push({
-                    id: item.key,
-                    name: item.val().name,
-                    category: item.val().category,
-                    text: item.val().text,
-                    imgurl: item.val().imgurl,
-                    audiourl: item.val().audiourl
-                });
-            });
-
-            res.status(200).json(items)
-        }, (error) => {
-            res.status(error.code).json({
-                message: `Error. ${error.message}`
-            });
-        });
-    });
-});
-
 //DELETE BY ID
 exports.deleteById = functions.https.onRequest((req, res) => {
     return cors(req, res, () => {
@@ -92,16 +60,16 @@ exports.deleteById = functions.https.onRequest((req, res) => {
         const id = req.body.id;
 
         const path = `/items/${id}`;
-        admin.database().ref(path).once('value', (snap) => {
-            if (snap.val() == null) {
-                return res.status(204).json({
-                    message: 'id not found'
-                });
-            } else {
+        admin.database().ref(path).once('value', (snapshot) => {
+            if (snapshot.exists()) {
                 admin.database().ref(path).remove();
                 //return message success
                 res.status(200).json({
                     message: `Successfully deleted ${id}`
+                });
+            } else {
+                return res.status(400).json({
+                    message: 'id not found'
                 });
             }
         });
@@ -113,36 +81,103 @@ exports.deleteById = functions.https.onRequest((req, res) => {
     });
 });
 
-//GET ALL MATCHING ID
-exports.getAllItemsMatchingName = functions.https.onRequest((req, res) => {
+//DELETE BY NAME
+// exports.deleteAllByName = functions.https.onRequest((req, res) => {
+//     return cors(req, res, () => {
+//         if (req.method !== 'POST') {
+//             return res.status(404).json({
+//                 message: 'Not allowed'
+//             });
+//         }
+//         let items = [];
+//         //return database objects where the child name is the same as the passed in name
+//         return database.orderByChild('name').equalTo(req.body.name).on('value', snapshot => {
+//             if (snapshot.exists()) {
+//                 snapshot.forEach((item) => {
+//                     items.push(item.id); 
+//                 }).then(()=> {
+//                     items.forEach((i) => {
+//                         admin.database.ref(`/items/{i}`).remove();
+//                     })
+//                 });
+                
+//                 res.status(200).json({
+//                     message: `Successfully deleted all items with name: ${req.body.name}`
+//                 });
+//             } else {
+//                 return res.status(400).json({
+//                     message: 'name not found'
+//                 });
+//             }
+//         });
+//     }, (error) => {
+//         res.status(error.code).json({
+//             message: `Error. ${error.message}`
+//         });
+//     });
+// });
+
+//GET ALL ITEMS IN DATABASE
+exports.getAllItems = functions.https.onRequest((req, res) => {
     return cors(req, res, () => {
         if (req.method !== 'GET') {
             return res.status(404).json({
                 message: 'Not allowed'
             });
         }
-        const name = req.body.name;
         let items = [];
 
-        return database.on('value', (snapshot) => {
+        return database.once('value', (snapshot) => {
             snapshot.forEach((item) => {
-                console.log('name');
-                if (item.name.contains(name)) {
-                    items.push({
-                        id: item.key,
-                        name: item.val().name,
-                        category: item.val().category,
-                        text: item.val().text,
-                        imgurl: item.val().imgurl,
-                        audiourl: item.val().audiourl
-                    });
-                }
+                items.push({
+                    id: item.key,
+                    name: item.val().name,
+                    page: item.val().page,
+                    category: item.val().category,
+                    text: item.val().text,
+                    imgurl: item.val().imgurl,
+                    audiourl: item.val().audiourl
+                });
             });
             res.status(200).json(items);
         }, (error) => {
             res.status(error.code).json({
                 message: `Error. ${error.message}`
             });
-        }); //end database snapshot
-    }); //end cors
+        });
+    });
+});
+
+//GET ALL MATCHING ID
+exports.getAllItemsMatchingName = functions.https.onRequest((req, res) => {
+    return cors(req, res, () => {
+        if (req.method !== 'POST') {
+            return res.status(404).json({
+                message: 'Not allowed'
+            });
+        }
+        let items = [];
+        //return database objects where the child name is the same as the passed in name
+        return database.orderByChild('name').equalTo(req.body.name).on('value', snapshot => {
+            //push all filtered items into a json object
+            snapshot.forEach((item) => {
+                items.push({
+                    id: item.key,
+                    name: item.val().name,
+                    page: item.val().page,
+                    category: item.val().category,
+                    text: item.val().text,
+                    imgurl: item.val().imgurl,
+                    audiourl: item.val().audiourl
+                });
+            });
+            //respond ok with json object
+            //note if there are no items then it will just return an empty json object. I can't get the error working for now
+            res.status(200).json(items);
+        }, (error) => {
+            res.status(error.code).json({
+                message: `Error. ${error.message}`
+            });
+        });
+    });
 });
