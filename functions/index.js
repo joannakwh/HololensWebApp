@@ -1,12 +1,28 @@
+/*
+ * Author: Joanna
+ * Date: 11/17/2019
+ * 
+ * Description: These scripts comprise of node endpoints to perform crud operations on a 
+ * Realtime Database
+ */
+
 const functions = require("firebase-functions");
 const cors = require('cors')({ origin: true });
 const admin = require('firebase-admin');
 
-admin.initializeApp();
+// Fetch the service account key JSON file contents
+var serviceAccount = require("C:/hololens-serverless-firebase-adminsdk-2g9h2-89a3f4455c.json");
 
-const database = admin.database().ref('/items');
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: 'https://hololens-serverless.firebaseio.com'
+});
 
-//https://blog.usejournal.com/build-a-serverless-full-stack-app-using-firebase-cloud-functions-81afe34a64fc
+var db = admin.database();
+var ref = db.ref('/items');
+
+//const database = admin.database().ref('/items');
+
 //CRUD HTTP ENDPOINTS
 
 //addItem
@@ -37,7 +53,7 @@ exports.addItem = functions.https.onRequest((req, res) => {
             'audiourl': audiourl
         };
 
-        const key = database.push(obj).key;
+        const key = ref.push(obj).key;
 
         //return message success and key
         return res.status(200).json({
@@ -85,42 +101,6 @@ exports.deleteById = functions.https.onRequest((req, res) => {
     });
 });
 
-//DELETE BY NAME
-// exports.deleteAllByName = functions.https.onRequest((req, res) => {
-//     return cors(req, res, () => {
-//         if (req.method !== 'POST') {
-//             return res.status(404).json({
-//                 message: 'Not allowed'
-//             });
-//         }
-//         let items = [];
-//         //return database objects where the child name is the same as the passed in name
-//         return database.orderByChild('name').equalTo(req.body.name).on('value', snapshot => {
-//             if (snapshot.exists()) {
-//                 snapshot.forEach((item) => {
-//                     items.push(item.id); 
-//                 }).then(()=> {
-//                     items.forEach((i) => {
-//                         admin.database.ref(`/items/{i}`).remove();
-//                     })
-//                 });
-                
-//                 res.status(200).json({
-//                     message: `Successfully deleted all items with name: ${req.body.name}`
-//                 });
-//             } else {
-//                 return res.status(400).json({
-//                     message: 'name not found'
-//                 });
-//             }
-//         });
-//     }, (error) => {
-//         res.status(error.code).json({
-//             message: `Error. ${error.message}`
-//         });
-//     });
-// });
-
 //GET ALL ITEMS IN DATABASE
 exports.getAllItems = functions.https.onRequest((req, res) => {
     return cors(req, res, () => {
@@ -131,7 +111,7 @@ exports.getAllItems = functions.https.onRequest((req, res) => {
         }
         let items = [];
 
-        return database.once('value', (snapshot) => {
+        return ref.once('value', (snapshot) => {
             snapshot.forEach((item) => {
                 items.push({
                     id: item.key,
@@ -153,7 +133,7 @@ exports.getAllItems = functions.https.onRequest((req, res) => {
     });
 });
 
-//GET ALL MATCHING ID
+//GET ALL MATCHING NAME
 exports.getAllItemsMatchingName = functions.https.onRequest((req, res) => {
     return cors(req, res, () => {
         if (req.method !== 'POST') {
@@ -163,7 +143,7 @@ exports.getAllItemsMatchingName = functions.https.onRequest((req, res) => {
         }
         let items = [];
         //return database objects where the child name is the same as the passed in name
-        return database.orderByChild('name').equalTo(req.body.name).on('value', snapshot => {
+        return ref.orderByChild('name').equalTo(req.body.name).on('value', snapshot => {
             //push all filtered items into a json object
             snapshot.forEach((item) => {
                 items.push({
@@ -184,6 +164,39 @@ exports.getAllItemsMatchingName = functions.https.onRequest((req, res) => {
             res.status(error.code).json({
                 message: `Error. ${error.message}`
             });
+        });
+    });
+});
+
+//GET BY key
+exports.getNameById = functions.https.onRequest((req, res) => {
+    return cors(req, res, () => {
+        if (req.method !== 'POST') {
+            return res.status(404).json({
+                message: 'Not allowed'
+            });
+        }
+        let items = [];
+        const id = req.body.id;
+
+        const path = `/items/${id}`;
+        admin.database().ref(path).once('value', (snapshot) => {
+            if (snapshot.exists()) {
+                snapshot.forEach((item) => {
+                    items.push({
+                        name: item.val().name,
+                    });
+                });
+                res.status(200).json(items);
+            } else {
+                return res.status(400).json({
+                    message: 'id not found'
+                });
+            }
+        });
+    }, (error) => {
+        res.status(error.code).json({
+            message: `Error. ${error.message}`
         });
     });
 });
