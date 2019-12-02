@@ -9,9 +9,28 @@
 const functions = require("firebase-functions");
 const cors = require('cors')({ origin: true });
 const admin = require('firebase-admin');
+const express = require('express');
+const path = require('path');
+const engines = require('consolidate');
+const axios = require('axios')
+const expressHbs = require('express-handlebars');
+
+const app = express();
+app.engine(
+    'hbs',
+    expressHbs({
+        layoutsDir: 'views/', //folder where your hbs files are
+        defaultLayout: 'layouts/index', //the main hbs file that will load first in every page
+        extname: 'hbs'
+    })
+);
+app.set('views','./views');
+app.set('view engine','hbs');
+app.use(cors);
+app.use('/public', express.static(path.join(__dirname, '/public')));
 
 // Fetch the service account key JSON file contents
-var serviceAccount = require("C:/hololens-serverless-firebase-adminsdk-2g9h2-89a3f4455c.json");
+var serviceAccount = require("./hololens-serverless-firebase-adminsdk-2g9h2-89a3f4455c.json");
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
@@ -21,8 +40,8 @@ admin.initializeApp({
 var db = admin.database();
 var ref = db.ref('/items');
 
-//CRUD HTTP ENDPOINTS
 
+//CRUD HTTP ENDPOINTS
 //addItem
 exports.addItem = functions.https.onRequest((req, res) => {
     return cors(req, res, () => {
@@ -199,3 +218,32 @@ exports.getNameById = functions.https.onRequest((req, res) => {
     });
 });
 
+//node app
+app.get('/', (req,res, next) => {
+    // return axios.get('https://us-central1-hololens-serverless.cloudfunctions.net/getAllItems')
+    // .then(function (response) {
+    //     //console.log(response.data);
+    //     let items = response.data;
+    //     res.render('layouts/view-all', {items:items});
+    //   })
+    //   .catch(function (error) {
+    //     console.log(error);
+    //   });
+
+      res.render('layouts/view-all');
+});
+
+app.get('/create', (req,res, next) => {
+    // return axios.get('https://us-central1-hololens-serverless.cloudfunctions.net/getAllItems')
+    // .then(function (response) {
+    //     //console.log(response.data);
+    //     let items = response.data;
+    //     res.render('layouts/view-all', {items:items});
+    //   })
+    //   .catch(function (error) {
+    //     console.log(error);
+    //   });
+
+      res.render('layouts/create');
+});
+exports.app = functions.https.onRequest(app);
