@@ -21,8 +21,6 @@ admin.initializeApp({
 var db = admin.database();
 var ref = db.ref('/items');
 
-//const database = admin.database().ref('/items');
-
 //CRUD HTTP ENDPOINTS
 
 //addItem
@@ -200,3 +198,4 @@ exports.getNameById = functions.https.onRequest((req, res) => {
         });
     });
 });
+
